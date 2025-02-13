@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Location Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+</head>
+    <style>
+
+        button {
+            
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: sans-serif;
+        }    
+        
+        table {
+            
+            margin: 20px auto;
+            border-collapse: collapse;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            background-color: #fff; 
+            transition: background-color 0.3s ease;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        #h2{
+            
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+
+        .container { 
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .filter-input {
+            width: 100%;    
+            box-sizing: border-box;
+            padding: 5px;
+            margin-bottom: 5px;
+        }
+        
+        #chart-container {
+            width:500px;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="container" style="margin-top:15px;">
+        <div class="row">
+            <div class="col-sm-12">
+                <h1>Weather Data by Location</h1>
+            </div>
+        </div>
+    </div>    
+
+    <br>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12">
+                <form method="get">
+                    <label for="location">Select Location:</label>
+                    <select name="location" id="location">
+                        <option value=""> Locations </option>
+                        {% for location in locations %}
+                            <option value="{{ location }}" {% if location == selected_location %}selected{% endif %}>
+                                {{ location }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Get Data</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <br>
+
+    {% if weather_data %}
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-12">
+                    <h2>{{ selected_location }}</h2>
+                </div>
+            </div>
+        <br>
+    
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div id="chart-container">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="container">
+            <div class="row">
+            
+                <div class="col-sm-12">  
+                <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Condition</th>
+                                <th>Temperature (°C)</th>
+                                <th>Max Temperature (°C)</th>
+                                <th>Min Temperature (°C)</th>
+                                <th>Total Precipitation (mm)</th>
+                                <th>Sunrise</th>
+                                <th>Sunset</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in weather_data %}
+                                <tr>
+                                    <td>{{ data.date }}</td>
+                                    <td>{{ data.condition }}</td>
+                                    <td>{{ data.temperature }}</td>
+                                    <td>{{ data.maxtemp }}</td>
+                                    <td>{{ data.mintemp }}</td>
+                                    <td>{{ data.totalprec }}</td>
+                                    <td>{{ data.sunrise }}</td>
+                                    <td>{{ data.sunset }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+        
+    {% endif %}
+
+    <script>
+        //Column filtering
+        const table = document.querySelector('table');
+        const rows = table.querySelectorAll('tbody tr');
+        const headers = table.querySelectorAll('thead th');
+
+        headers.forEach((header, index) => {
+            if (index > 0) { // Skip the first (Date) column if you don't want to filter it.
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.classList.add('filter-input');
+                input.placeholder = `Filter ${header.textContent}`;
+                header.appendChild(input);
+
+                input.addEventListener('keyup', () => {
+                    const filterText = input.value.toLowerCase();
+                    rows.forEach(row => {
+                        const cell = row.cells[index];
+                        const cellText = cell.textContent.toLowerCase();
+                        if (cellText.includes(filterText)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+
+        // Chart.js code
+        const chartData = JSON.parse('{{chart_data|safe}}'); 
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+        
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                            display: false
+                        },
+                    title: {
+                        display: false
+                            }
+                        },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false // Hide grid lines on x-axis
+                            }
+                        },
+                    y: {
+                        grid: {
+                            display: false // Hide grid lines on y-axis
+                            }
+                    }
+                }
+            }
+            
+                
+        });
+    </script>
+
+</body>
+</html>
